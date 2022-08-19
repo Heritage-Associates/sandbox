@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+<meta content="utf-8" http-equiv="encoding">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.5.3/css/bootstrap.min.css" integrity="sha512-oc9+XSs1H243/FRN9Rw62Fn8EtxjEYWHXRvjS43YtueEewbS6ObfXcJNyohjHqVKFPoXXUxwc+q1K7Dee6vv9g==" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha512-SfTiTlX6kk+qitfevl/7LibUOeJWlt9rbyDn92a1DqWOw9vWG2MFoays0sgObmWazO5BQPiFucnnEAjpAB+/Sw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.5.3/js/bootstrap.bundle.min.js" integrity="sha512-iceXjjbmB2rwoX93Ka6HAHP+B76IY1z0o3h+N1PeDtRSsyeetU3/0QKJqGyPJcX63zysNehggFwMC/bi7dvMig==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/promise-polyfill/8.0.0/polyfill.min.js" integrity="sha512-TyYCCA6yKLyOfhOXtWcxjapW2D2jvpGdGFg0rJ/ZQOXHaxG3czv1JZrIIWQYWMuwrL0lI5KyxY+1S9V9ztYduA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/3.3.4/jquery.inputmask.bundle.min.js" integrity="sha512-YgIQ8r5OeryMqeugHoZJQK5u7aujvOZS9X/HOSyioJFQhxpcxpbSD2a5N7ZEp0vtzbMIhzWYALtKXPCqkiyGcQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+let data = {
+            token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJsb25kZW4taW5zdXJhbmNlLmNsb3VkIiwic3ViIjoicGFwZXIgYXBwIiwic2NvcGUiOiJzZWxmIiwiZmlyc3ROYW1lIjoiVGVzdCIsImxhc3ROYW1lIjoiUGF5b3IiLCJlbWFpbCI6InJlcG9ydGluZ0BpdnJ0ZWNoZ3JvdXAuY29tIiwiYWRkcmVzcyI6IjEwMCBDb25ncmVzcyIsImNpdHkiOiJBdXN0aW4iLCJzdGF0ZSI6IlRYIiwiemlwQ29kZSI6Ijc4NzAxIiwiY2xpZW50Q29kZSI6InBhcGVyIGFwcCIsImFwcE5hbWUiOiJlYXBwX3Byb2QiLCJqdGkiOiJiMDkwM2JjMC1mOWFjLTRiNGMtYTEzMS1hYjM1YTMzMDhhYzkiLCJpYXQiOjE2NjA4NjkwMTksImV4cCI6MTY2MDg3MjYxOX0.n6WUwOX_UTUpwA79rwQHiZvMEfXBblSLs1I611zhAo0",
+            card_account_number: "",
+            card_verification_value: "",
+            card_expiry_month: "",
+            card_expiry_year : ""
+};
+let api_url = "https://ccp.prod.londen-insurance.cloud/submit-payment-ccp";
+
+
+jQuery(function ($){
+    // getting current year for year validation.
+    const currentYear = new Date().getFullYear().toString();
+    document.getElementById('card_expiry_year').min = currentYear;
+        
+    // Set max year for dropdown - 20 years from now
+    var minYear = currentYear;
+    for (var i = 1; i <= 20; i++) {
+        $("#card_expiry_year").append(
+    
+            $("<option></option>")
+                .attr("value", minYear)
+                .text(minYear)
+        );
+        minYear++;
+    };
+    
+    //Set Month Drop Down padded with zeros 
+    for (var i = 1; i <= 12; i++) {
+    
+        var padded = i < 10 ? "0" + i : "" + i;
+        $("#card_expiry_month").append(
+            $("<option></option>")
+                .attr("value", padded)
+                .text(padded)
+        );
+    };
+    
+    //hide error message
+    $("#cc_error-message").hide();
+    $("#ccv_error-message").hide();
+    $("#date_error-message").hide();
+
+    //visually separate cc numbers        
+    $("#card_account_number").inputmask('9999 9999 9999 9999');
+    
+    // Only allow numeric values to be entered
+    $("#card_verification_value").inputmask('999',{ showMaskOnFocus: false, showMaskOnHover: false, placeholder: ''  });
+  
+    
+        $("#submit_payment_form").submit(function (e){
+            
+          //check for errors with data entered
+          var error_occured = false;
+          var cc_length = $('#card_account_number').val().replaceAll('_','').replaceAll(' ','').length;
+          var ccv_length = $('#card_verification_value').val().length;
+           
+          //Validate Credit Card Length
+          if (cc_length <16){
+            $("#cc_error-message").show();
+            $("input[type=text]").css({"border": "2px solid red"});
+             error_occured = true;  
+            
+          } else {
+            $("#cc_error-message").hide();
+            $("input[type=text]").css({"border": "2px solid darkgreen"});
+          }
+        
+         // Validate CCV length 
+         
+          if (ccv_length <3){
+            $("#ccv_error-message").show();
+            $("input[type=password]").css({"border": "2px solid red"});
+             error_occured = true;  
+          
+          } else {
+            $("#ccv_error-message").hide();
+            $("input[type=password]").css({"border": "2px solid darkgreen"});
+            
+          }
+          
+          
+          // card expiry date validation.
+          var card_expiry_date = new Date($('#card_expiry_year').val(),$('#card_expiry_month').val()-1,30);
+          var current_date = new Date();
+          if (card_expiry_date < current_date) {
+              $("#date_error-message").show();
+              $("select").css({"border": "2px solid red"});
+              error_occured = true; 
+          } else {
+              $("#date_error-message").hide();
+              $("select").css({"border": "2px solid darkgreen"});
+          }
+          
+          //if there was a validation error - prevent form submit
+          if (error_occured) {
+               return false;  
+          }
+       
+           
+            e.preventDefault();
+            $("#overlay").fadeIn(300);
+            data.card_account_number = $('#card_account_number').val().replace(/ /g,'');
+            data.card_verification_value = $('#card_verification_value').val();
+            data.card_expiry_month = $('#card_expiry_month').val();
+            data.card_expiry_year = $('#card_expiry_year').val();
+
+           
+            fetch(api_url,{
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json" 
+                        },
+                        body:JSON.stringify(data)
+                })
+                .then(function (response) {
+                     
+                     $("#submit_payment_form").trigger("reset");
+                     $("#overlay").fadeOut(300);
+                     $("#submit_payment_form").hide();
+                     if (response.status === 202 ) {
+                        response.json().then( function(res) {
+                           showResult(res, response.status);
+                        });
+                     } else if (response.status === 206) {
+                         response.json().then( function(res) {
+                           showResult(res, response.status);
+                        });
+                     } else if (response.status === 400 || response.status === 406 ) {
+                         response.json().then( function(res) {
+                           showResult(res, 4);
+                        });
+                     } else if (response.status === 503 ) {
+                         response.json().then( function(res) {
+                           showResult(res, 503);
+                        });
+                     } else {
+                         showResult(null, 5);
+                     }
+                     
+                })
+                .catch(function(error) {
+                        console.log('request failed', error)
+                        $("#overlay").fadeOut(300);
+                        $("#submit_payment_form").show();
+                    });
+                
+        });
+        $("#back_btn").click(function (e){
+            $("#generalMessage").removeClass("text-danger");
+            $("#generalMessage").text("")
+            $("#result").text("");
+            $("#sequenceNum").text("");
+            $("#clientRef").text("");
+            $("#resultError").text("");
+            $("#result_section").hide();
+            $("#submit_payment_form").show();
+        });
+});
+
+function showResult(res, code) {       
+var createdMessage = "Credit Card Profile has been created.";
+var partilyMessage = "ALERT!: The Sequence Number below was received from IVR but was not transmitted. Please record this Sequence Number and enter it manually to complete the application.";
+var errorMessage = "An error has occurred. Please resubmit the card information.";
+            if (code === 202 ) {
+                $("#generalMessage").text(createdMessage);
+                $("#generalMessage").addClass("text-success");
+                $("#result").text(res.result);
+                $("#sequenceNum").text(res.sequence_id);
+                $("#clientRef").text(res.client_reference_code);
+                $("#error").hide();
+                $("#back_btn").hide();
+                $("#result_section").show();
+            } else if ( code === 206 ){
+                $("#generalMessage").text(partilyMessage);
+                $("#generalMessage").addClass("text-warning");
+                $("#result").text(res.result);
+                $("#sequenceNum").text(res.sequence_id);
+                $("#clientRef").text(res.client_reference_code);
+                $("#error").hide();
+                $("#back_btn").hide();
+                $("#result_section").show();
+            } else if ( code === 4 ){
+                $("#generalMessage").text(errorMessage);
+                $("#generalMessage").addClass("text-danger");
+                $("#result").text(res.result);
+                $("#sequenceNum").text(res.sequence_id);
+                $("#clientRef").text(res.client_reference_code);
+                $("#resultError").text(res.error);
+                $("#result_section").show();
+            } else if ( code === 503 ){
+                $("#generalMessage").text(errorMessage);
+                $("#generalMessage").addClass("text-danger");
+                $("#result").text(res.result);
+                $("#sequenceNum").text(res.sequence_id);
+                $("#clientRef").text(res.client_reference_code);
+                $("#resultError").text(res.error);
+                $("#result_section").show();
+            } else {
+                $("#generalMessage").text(errorMessage);
+                $("#generalMessage").addClass("text-danger");
+                $("#result").text("Error");
+                $("#resultError").text("Service Unavailable");
+                $("#result_section").show();
+            }
+}       
+        
+</script>
+<style>
+
+body {
+  font-family: Arial;
+  font-size: 17px;
+  padding: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.container {
+  background-color: #f2f2f2;
+  padding: 5px 20px 15px 20px;
+  border: 1px solid lightgrey;
+  border-radius: 3px;
+  width: "800";
+  height: "400";
+}
+
+input[type=text] {
+  width: 100%;
+  margin-bottom: 5px;
+  padding: 12px;
+  border: 2px solid darkgreen;
+  border-radius: 3px;
+}
+
+input, select {
+  margin-bottom: 5px;
+  padding: 12px;
+  border: 2px solid darkgreen;
+  border-radius: 3px;
+}
+
+input, select{
+    width: 100%;
+}
+
+label {
+  margin-bottom: 10px;
+  display: block;
+}
+
+.error_message {
+  color: #cc0033;
+  display: inline-block;
+  font-size: 12px;
+  line-height: 15px;
+  margin-bottom: 15px;
+}
+
+#result_section {
+    width: 100%;
+    height:100%;
+}
+
+.icon-container {
+  margin-bottom: 10px;
+  padding: 7px 0;
+  font-size: 30px;
+}
+
+.btn-submit {
+    background-color: #4CAF50;
+    color: white;
+    margin: 10px;
+    border-radius: 4px;
+}
+
+/* spinner */
+#overlay{	
+  position: fixed;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  height:100%;
+  display: none;
+  background: rgba(0,0,0,0.6);
+}
+.cv-spinner {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;  
+}
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px #ddd solid;
+  border-top: 4px #2e93e6 solid;
+  border-radius: 50%;
+  animation: sp-anime 0.8s infinite linear;
+}
+@keyframes sp-anime {
+  100% { 
+    transform: rotate(360deg); 
+  }
+}
+
+</style>
+</head>
+<body>
+    <div class="container" id="create-payment-profile">
+       <div class="row">
+            <div class="col-6">
+                <h3>Create Payment Profile</h3>
+            </div>
+        </div>
+        <form id="submit_payment_form" name="submit_payment_form">
+                   
+                            <div class="row">
+                                <div class="col-6">
+                                    <label for="card_account_number">Credit Card Number</label>
+                                    <input type="text" id="card_account_number" name="card_account_number"  placeholder="xxxx xxxx xxxx xxxx" autocomplete="off" maxlength="19" >
+                                    <div class="error_message"id="cc_error-message">Credit Card Number limit to 16 digits</div>
+                                </div>
+                                <div class="col-3">
+                                    <label for="cvv">CVV</label>
+                                    <input type="password" id="card_verification_value" name="card_verification_value"  placeholder="xxx"  maxlength="3" size="3" title="">
+                                    <div class="error_message" id="ccv_error-message">Card Verification Value limit to 3 digits.</div>
+                                </div>
+                            
+                            </div>
+                            <div class="row">
+                                <div class="col-3">
+                                    <label for="card_expiry_month">Expiration Month</label>
+                                    <select name="card_expiry_month" id="card_expiry_month" title="Card Expiration Month 2 digits">
+                                    </select>
+                                    <div class="error_message" id="date_error-message">Credit Card can't be expired.</div>
+                                </div>
+                                <div class="col-3">
+                                    <label for="card_expiry_year">Year</label>                                   
+                                    <select name="card_expiry_year" id="card_expiry_year" title="Card Expiration Year 4 digits">
+                                    </select>    
+                                    
+                                </div>
+                            </div>  
+                    
+                    <div class="row">
+                            
+                        <button type="submit" id="submit_form" class="btn btn-submit" >Create Profile</button>
+                            
+                        </div>
+        </form>
+        <div id="result_section" style="display:none">
+            <div class="row" >
+                <div class="col-10">
+                    <label id="generalMessage" class="font-weight-bold"></label>
+                    <label >Result:</label>
+                    <label id="result"></label>
+                    <label >Sequence number:</label>
+                    <label id="sequenceNum"></label>
+                    <label >Client reference:</label>
+                    <label id="clientRef"></label>
+                    <label id="error">Error:</label>
+                    <label id="resultError"></label>
+                </div>
+            </div> 
+            <div class="row">
+                <div class="col-4">
+                    <button class="btn btn-secondary" id="back_btn"><i class="fa fa-chevron-circle-left"></i> Back</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="overlay">
+        <div class="cv-spinner">
+              <span class="spinner"></span>
+        </div>
+    </div>
+</body>
+</html>
