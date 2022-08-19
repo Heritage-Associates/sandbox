@@ -130,7 +130,7 @@ jQuery(function ($){
                         body:JSON.stringify(data)
                 })
                 .then(function (response) {
-                     
+                     console.log(response);
                      $("#submit_payment_form").trigger("reset");
                      $("#overlay").fadeOut(300);
                      $("#submit_payment_form").hide();
@@ -174,7 +174,9 @@ jQuery(function ($){
         });
 });
 
-function showResult(res, code) {       
+function showResult(res, code) {     
+console.log(res)
+console.log(code)  
 var createdMessage = "Credit Card Profile has been created.";
 var partilyMessage = "ALERT!: The Sequence Number below was received from IVR but was not transmitted. Please record this Sequence Number and enter it manually to complete the application.";
 var errorMessage = "An error has occurred. Please resubmit the card information.";
